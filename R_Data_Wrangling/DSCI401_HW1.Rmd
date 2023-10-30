@@ -1,0 +1,108 @@
+---
+title: "Chicago Cubs All Time Data"
+author: "Bernard Ofori Boateng"
+date: "2023-09-01"
+output: html_document
+---
+
+```{r}
+# Load Packages
+
+library(tidyverse)
+```
+
+```{r}
+# Load Data
+cubs <- read.csv("https://raw.githubusercontent.com/gjm112/DSCI401/main/data/cubs_all_time.csv")
+```
+
+```{r}
+# Getting a sense of the dataframe
+dim(cubs)
+```
+```{r}
+# First few rows of dataframe
+head(cubs)
+```
+
+```{r}
+# Number of games won betwen 1876 and 2022
+
+total_games_won <- sum(cubs$W)
+cat("Number of games won betwen 1876 and 2022 by the Cubs:", total_games_won)
+```
+
+
+```{r}
+# (a)
+# Number of games lost betwen 1876 and 2022
+
+total_games_won <- sum(cubs$L)
+cat("Number of games lost betwen 1876 and 2022 by the Cubs:", total_games_won)
+```
+
+
+```{r}
+# (b)
+
+# Year the Cubs scored the most runs
+most_runs <- max(cubs$R)
+# print(most_runs)
+most_runs_year <- cubs$Year[cubs$R == most_runs]
+cat("Year the Cubs scored the most runs:",  most_runs_year)
+```
+
+```{r}
+# Year the Cubs scored the fewest runs
+fewest_runs <- min(cubs$R)
+# print(most_runs)
+fewest_runs_year <- cubs$Year[cubs$R == fewest_runs]
+cat("\n Year the Cubs scored the fewest runs:",  fewest_runs_year)
+
+```
+
+```{r}
+#Scatter plot showing the runs scored over the years
+library(plotly)
+
+fig <- plot_ly(cubs, x = ~Year, y = ~R, type = "scatter", mode = "lines+markers")
+fig <- fig %>% layout(
+  title = "Cubs Runs Scored Over the Years",
+  yaxis = list(title = "Runs Scored"),
+  xaxis = list(title = "Year")
+)
+# Show Scatter plot
+fig
+```
+
+
+```{r}
+# Games played in 2020
+
+games_played_2020 <- cubs$G[cubs$Year == 2020]
+cat("Number of games played in 2020:", games_played_2020)
+```
+
+### Typically, teams in the MLB play 162 games in the regular season. However, in 2020, during the height of COVID19 pandemic, the MLB made a ddecision to reduce the number of games in the regular season to only 60 games to ensure player, fan and staff safety. The reduced schedule meant that there were fewer opportunities for the Cubs to acculmulate runs, resulting in the lowest run count in the Cubs history.
+
+
+```{r}
+#(c)
+# Number of seasons with over 3 million attendance
+attendance_over_3m <- sum(cubs$Attendance > 3000000, na.rm = TRUE)
+cat("Number of seasons the Cubs total attendance was over 3 million:", attendance_over_3m)
+
+```
+
+```{r}
+#Scatter plot showing the Attendance over the years
+fig <- plot_ly(cubs, x = ~Year, y = ~Attendance, type = "scatter", mode = "lines+markers")
+fig <- fig %>% layout(
+  title = "Cubs Attendance Over the Years",
+  yaxis = list(title = "Attendance"),
+  xaxis = list(title = "Year")
+)
+# Show Scatter plot
+fig
+```
+

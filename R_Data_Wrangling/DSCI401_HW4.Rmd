@@ -1,0 +1,115 @@
+---
+title: "DSCI401_HW4"
+author: "Bernard Ofori Boateng"
+date: "2023-10-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Loading the packages
+library(tidyverse)
+library(mosaicData)
+```
+
+```{r}
+#Reading the dataset
+head(HELPrct[,1:6])
+```
+```{r}
+#Getting the columns
+names(HELPrct)
+```
+#Question 1
+
+#(a)
+###Use the HELPrct data from the mosaicData to calculate the mean of all numeric variables (be sure to exclude missing values).
+```{r}
+#Use lapply to select only numeric columns
+numeric_cols <- HELPrct[, unlist(lapply(HELPrct, is.numeric))]
+
+#Calculate the mean for the numeric columns
+numeric_mean <- colMeans(numeric_cols, na.rm = TRUE)
+numeric_mean
+```
+
+#(b)
+
+###Find the mean of all the numeric variables stratified by sex and age group where age groups are defined as ranges of 10 years (i.e. 0-10, 10-20, 20-30, etc).
+```{r}
+#Define age groups with 10 year interval
+ageBreaks <- seq(0, 100, by = 10)
+
+#Create stratified mean by age group and sex
+stratified_mean <- HELPrct %>%
+  mutate(age_group = cut(age, breaks = c(ageBreaks, Inf))) %>%
+  group_by(sex, age_group) %>%
+  summarize(across(where(is.numeric), mean, na.rm = TRUE))
+
+stratified_mean
+```
+
+#(c)
+###Using the data set created in the previous problem, create a set of line plots with the average age of the age group on the x-axis and each of other numeric variables on the y-axis in separate plots stratified by sex. (Note: You are not allowed to use a for loop here or simply copy-and- paste 20 times!)
+
+
+```{r}
+stratified_mean %>%
+  ungroup() %>%
+  select(where(is.numeric) & !age & !sex) %>%
+  colnames() %>%
+  map(~ ggplot(stratified_mean, aes(x = age_group, y = .data[[.]], group = sex, color = sex)) +
+    geom_line() +
+    geom_point() +
+    labs(title = .)) %>%
+  walk(print)
+```
+
+
+#Question 2
+
+###The team IDs corresponding to Brooklyn baseball teams from the Teams data frame from the Lahman package are listed below. Use map int() to find the number of seasons in which each of those teams played by calling a function called count seasons.
+
+```{r}
+library(Lahman)
+bk_teams <- c("BR1", "BR2", "BR3", "BR4", "BRO", "BRP", "BRF")
+
+bk_teams
+```
+
+```{r}
+#Generate a function called count_seasons
+count_seasons <- function(df, team_name) {
+  seasons_played <- df %>%
+    filter(teamID == team_name) %>%
+    group_by(yearID) %>%
+    summarize(seasons = n()) %>%
+    nrow()
+  return(seasons_played)
+}
+```
+
+```{r}
+#Test the function for a specific team
+count_seasons(Teams, "BR3")
+```
+```{r}
+#Use map_int to find the number of seasons for each team
+seasons_played <- map_int(bk_teams, count_seasons, df = Teams)
+seasons_played
+```
+
+```{r}
+#Create a data frame with team IDs and the corresponding number of seasons
+results <- data.frame(teamID = bk_teams, Seasons_Played = seasons_played)
+
+results
+```
+
+
+#Python Link:
+
+#https://colab.research.google.com/drive/17fFab6P_17PcVB-PIJZty0CYBubchsrc#scrollTo=ZLhdaAVjc_zE&uniqifier=1

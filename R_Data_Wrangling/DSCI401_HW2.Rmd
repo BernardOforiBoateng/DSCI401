@@ -1,0 +1,170 @@
+---
+title: "DSCI401_HW2"
+author: "Bernard Ofori Boateng"
+date: "2023-09-20"
+---
+
+# Question 1
+```{r}
+# loading the teams dataset
+teams <- read.csv("https://raw.githubusercontent.com/gjm112/DSCI401/main/data/Teams.csv")
+```
+
+```{r}
+# loading the first five rows
+head(teams)
+```
+
+```{r}
+# getting the shape of the dataframe
+dim(teams)
+```
+
+```{r}
+names(teams)
+```
+
+```{r}
+# loading the tidyverse
+suppressMessages(library(tidyverse))
+```
+
+
+## (a)
+```{r}
+teams_new <- teams %>% filter(yearID >= 2000 & yearID <= 2009) %>% select(yearID, W, L)
+head(teams_new)
+```
+
+## (b)
+```{r}
+# filtering the teams data for HR>=200 for the Chicago cubs
+cubs_HR <- teams %>% filter(teamID == "CHN" & HR >= 200) 
+
+# finding the number of unique years the cubs had HR>=200
+total_years <- length(unique(cubs_HR$yearID))
+cat("Number of years the Chicago Cubs hit at least 200 HRs:" ,total_years)
+
+# finding the median of the wins
+median_wins <- median(cubs_HR$W)
+cat("\nThe median number of wins in the seasons the Chicago Cubs hit at least 200 HRs:" ,median_wins)
+
+```
+## (c)
+```{r}
+# creating the factor election based on the presidential terms
+teams <- teams %>% mutate(election = factor((yearID-1788) %/% 4 + 1))
+head(teams)
+```
+```{r}
+# finding the home runs for each 4 year term
+HR_term <- teams %>% group_by(election) %>% summarise(HR_total = sum(HR))
+head(HR_term)
+```
+```{r}
+# finding the term with the most home runs
+HR_term_max <- HR_term %>% filter(HR_total == max(HR_total))
+HR_term_max
+```
+### The presidential term with the most home runs is the 58th preseidential term with a total of 24076 home runs
+
+## (d)
+```{r}
+# loading the ggplot2 package
+library(ggplot2)
+
+# removing observations where league ID is missing
+teams_lgID_complete <- teams %>% filter(!is.na(lgID))
+
+# line plot of total home runs per season
+ggplot(teams_lgID_complete, aes(x = yearID, y = HR, color = lgID)) + geom_line() + 
+  labs(
+        title = "Total Home Runs Per Season Stratified by League",
+                                  x = "Year",
+                                  y = "Total Home Runs",
+                                  color = "League ID"
+                                )
+```
+
+## (e)
+```{r}
+# creating the indicator variable called winning record 
+teams <- teams %>% mutate(winning_record = W > L)
+head(teams)
+```
+```{r}
+# scatter plot of Runs (R) vs Runs against (RA)
+ggplot(teams, aes(x = R, y = RA, color = winning_record)) + geom_point() + 
+  labs(
+        title = "Scatter Plot of Runs (R) vs Runs against (RA)",
+                                  x = "Runs (R)",
+                                  y = "Runs Against (RA)",
+                                  color = "Winning Record"
+                                )
+```
+
+
+# Question 2
+
+```{r}
+library(mdsr)
+# getting a glimpse of the dataset
+glimpse(Violations)
+
+```
+```{r}
+# loading the first 5 rows of the violations dataset
+head(Violations)
+```
+
+## (a)
+```{r}
+# proportion of inspections graded into A and not A for each boro 
+
+boro_proportion <- Violations %>%
+  mutate(grade_A_or_NotA = ifelse(is.na(grade) | grade != "A", "Not_A", "A")) %>%
+  group_by(boro, grade_A_or_NotA) %>%
+  summarise(observation_count = n()) %>%
+  mutate(proportion_A = sum(observation_count[grade_A_or_NotA == "A"] / sum(observation_count))) %>%
+  filter(grade_A_or_NotA == "A") 
+
+boro_proportion <- boro_proportion %>%
+  select(boro, proportion_A)
+
+boro_proportion
+```
+
+## (b)
+
+```{r}
+# finding the top ten dba's with the most no. of inspections
+top_dba <- Violations %>%
+  group_by(dba) %>%
+  summarise(no.of_inspections = n(),mean_score = mean(score,na.rm=TRUE)) %>%
+  arrange(desc(no.of_inspections))
+top10_dba <- top_dba[1:10,] %>%
+  arrange(mean_score) %>%
+  select(dba, mean_score)
+top10_dba
+```
+### STARBUCKS had the lowest average inspection score
+
+
+
+## (c)
+```{r}
+# getting data from Manhattan zip codes with 50 or more inspections
+median_violation_score <- Violations %>% 
+  filter(boro == "MANHATTAN") %>%
+  group_by(zipcode) %>%
+  filter(n() >= 50) %>%
+  summarise(median_score = median(score, na.rm = TRUE),no_of_inspections = n()) %>% 
+  arrange(zipcode)
+median_violation_score
+```
+### From observations, there appears to be an inverse relationship between the median score and number of inspections. The zip codes that had more inspections had lower median score. This could be due that the zip codes with more inspections complied with regulations. 
+
+
+
+# Python Link: https://colab.research.google.com/drive/1qV6zAsS0Mw95pVad3ZnYWL1S32FgTbhw#scrollTo=6eOzEthQgg7l&uniqifier=1
+

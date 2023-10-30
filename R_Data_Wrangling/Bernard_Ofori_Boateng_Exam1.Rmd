@@ -1,0 +1,287 @@
+---
+title: "DSCI401_Exam1"
+author: "Bernard Ofori Boateng"
+date: "2023-10-18"
+output: html_document
+---
+
+```{rsetup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# loading the package and tables
+library(tidyverse)
+```
+
+
+# Question 1
+```{r}
+#Loading the dataset
+employee <- read.csv("https://raw.githubusercontent.com/gjm112/DSCI401/main/data/Employee.csv")
+```
+
+
+```{r}
+#Reading the first few rows of the dataset
+head(employee)
+```
+
+```{r}
+# getting the shape of the dataframe
+dim(employee)
+```
+```{r}
+#Getting the columns
+names(employee)
+```
+#(a)
+
+### For each education level, what percentage of the employees are female
+```{r}
+#Grouping the dataframe by education and gender
+Grouped <- employee %>%
+  group_by(Education, Gender) %>%
+  summarise(count = n())
+
+print(Grouped)
+```
+```{r}
+#Get the total education count for each level
+Total_Education_Count <- employee %>%
+  group_by(Education) %>%
+  summarise(Total_Count = n())
+
+print(Total_Education_Count)
+```
+
+```{r}
+# Find the percentage of females in each level
+percentage_of_female <- Grouped %>%
+  filter(Gender == "Female") %>%
+  left_join(Total_Education_Count, by = "Education") %>%
+  mutate(percentage = (count / Total_Count) * 100) %>%
+  select(Education, percentage)
+
+print(percentage_of_female)
+```
+
+#(b)
+### On a single plot, make three line plots, one for each City, with the variable JoiningYear on the x-axis and cumulative number of hires up to that year on the y-axis (Note: Each row is considered a hire).
+
+```{r}
+#Group employee dataframe by city and joining year and find the cumulative sum of hires by year
+cumulative_hires_by_year <- employee %>%
+  group_by(City, JoiningYear) %>%
+  summarise(Cumulative_Hires = n()) %>%
+  group_by(City) %>%
+  mutate(Cumulative_Hires = cumsum(Cumulative_Hires))
+
+cumulative_hires_by_year
+```
+
+```{r}
+# Create a line plot for each City
+ggplot(cumulative_hires_by_year, aes(x = JoiningYear, y = Cumulative_Hires, color = City)) +
+  geom_line() +
+  labs(x = "Joining Year", y = "Cumulative Number of Hires") +
+  ggtitle("Cumulative Number of Hires by Joining Year")
+```
+
+#(c)
+### Create side-by-side boxplots of Age vs Gender faceted by City on the rows and Education on the columns.
+
+```{r}
+# Create a side-by-side boxplot
+ggplot(employee, aes(x = Gender, y = Age)) +
+  geom_boxplot() +
+  facet_grid(City ~ Education) +
+  labs(x = "Gender", y = "Age") +
+  ggtitle("Age vs Gender Faceted by City and Education")
+```
+
+#(d)
+### For each JoiningYear, compute the ratio of the number of Bachelor’s degrees hired to Ph.D’s hired. Which year has the highest ratio and what is that ratio? For each City, compute the ratio of the number of Bachelor’s degrees hired to Ph.D’s hired. Which city has the highest ratio and what is that ratio? You have now found a year and a city. How many master’s level people were hired in the year and city that you just found?
+
+```{r}
+# Calculate the ratio of Bachelor's to Ph.D's for each JoiningYear
+ratio1 <- employee %>%
+  filter(Education %in% c("Bachelors", "PHD")) %>%
+  group_by(JoiningYear, Education) %>%
+  summarise(Count = n()) %>%
+  pivot_wider(names_from = Education, values_from = Count, values_fill = 0) %>%
+  mutate(Ratio = Bachelors / PHD) %>%
+  arrange(desc(Ratio))
+
+ratio1
+```
+###Which year has the highest ratio and what is that ratio?
+###From the output, the year with the highest ratio is 2012 with a ratio of 31.5
+
+
+```{r}
+# Calculate the ratio of Bachelors to PHD for each City
+ratio2 <- employee %>%
+  filter(Education %in% c("Bachelors", "PHD")) %>%
+  group_by(City, Education) %>%
+  summarise(Count = n()) %>%
+  pivot_wider(names_from = Education, values_from = Count, values_fill = 0) %>%
+  mutate(Ratio = Bachelors / PHD) %>%
+  arrange(desc(Ratio)) 
+  
+ratio2
+```
+
+### Which city has the highest ratio and what is that ratio?
+###From the output, the city with the highest ratio is Pune, with a ratio of 42.17
+
+
+```{r}
+# How many master's level people were hired in the year and city with the highest ratio
+masters_hired <- sum(employee$Education == "Masters" & employee$JoiningYear == 2012 & employee$City == "Pune")
+
+cat("The number of masters level people from Pune and hired in 2012 is :", masters_hired)
+```
+
+#Question 2
+
+
+```{r}
+#Loading the dataset
+stops <- read.csv("https://raw.githubusercontent.com/gjm112/DSCI401/main/data/CTA_List_of_L_Stops.csv")
+
+
+entries <- read.csv("https://raw.githubusercontent.com/gjm112/DSCI401/main/data/CTA_entries.csv")
+```
+
+```{r}
+#Reading the first few rows of the dataset
+head(stops)
+```
+```{r}
+#Getting the shape of stops
+dim(stops)
+```
+```{r}
+#Getting the columns
+names(stops)
+```
+```{r}
+#Reading the first few rows of the dataset
+head(entries)
+```
+```{r}
+#Getting the shape of entries
+dim(entries)
+```
+```{r}
+#Getting the columns
+names(entries)
+```
+#(a)
+### Using the stops data set, create a data set that only includes stops on the red line and removes duplicated MAP IDs. Merge the stops onto the entries data set. (Note: station id in entries links to MAP ID in stops!)
+
+```{r}
+#Filter stops for the red line and remove duplicated MAP IDs
+red_line_stops <- stops %>%
+  filter(RED == "true") %>%
+  distinct(MAP_ID)
+```
+
+```{r}
+#Merge stops onto entries using the station_id (MAP_ID) as the key
+merged_data <- entries %>%
+  inner_join(red_line_stops, by = c("station_id" = "MAP_ID"))
+
+#Print the merged dataset
+head(merged_data)
+```
+
+#(b)
+###Using this merged data set, compute the average number of rides per day for each station on the red line. Next compute the average number of rides per day for each station for each month (i.e.average rides per day at Loyola at January, average rides per day at Loyola in February, etc.).
+
+```{r}
+#Calculate the average rides per day for each station on the red line
+average_rides_per_station_day <- merged_data %>%
+  group_by(stationname) %>%
+  summarise(average_rides_per_day = mean(rides, na.rm = TRUE))
+
+head(average_rides_per_station_day)
+```
+
+```{r}
+# Convert the 'date' column to DateTime
+merged_data$date <- as.Date(merged_data$date, format = "%m/%d/%Y")
+
+# Extract the month from the 'date' column and create a new 'MONTH' column
+merged_data$MONTH <- format(merged_data$date, "%m")
+
+# Group by 'stationname' and 'MONTH' and calculate the average rides per day for each month
+average_rides_per_station_month <- merged_data %>%
+  group_by(stationname, MONTH) %>%
+  summarise(average_rides_per_day_month = mean(rides, na.rm = TRUE))
+
+head(average_rides_per_station_month)
+```
+
+#(c)
+###Using this two variables found in the previous part, for each station create a variable called ratio which is the ratio of rides per day per month divided by rides per day. (This is essentially a measure of how far away ridership in a given month gets away from the overall average at a stop with values larger than 1 indicating a sharp increase and values less than 1 a sharp decrease). Display the top ten largest ratios and comment on and reason you believe these particular stops and months are the top of the list.
+
+
+
+```{r}
+#Calculate the ratio of rides per day per month
+ratio_data <- average_rides_per_station_month %>%
+  left_join(average_rides_per_station_day, by = "stationname") %>%
+  mutate(ratio = average_rides_per_day_month/ average_rides_per_day)
+
+head(ratio_data)
+```
+
+```{r}
+#Get the top ten largest ratios
+top_10_ratios <- ratio_data %>%
+  arrange(desc(ratio)) %>%
+  head(10)
+
+top_10_ratios
+```
+###Addison-North Main and Fullerton stops are close to Wrigley Field, home of the Chicago Cubs, which attracts large crowds during baseball season. 
+
+
+#(d)
+### Compute the standard deviation of this ratio for each station and find the stations with the 5 largest standard deviations. Using these five stations, a line plot (one line for each station) with month on the x-axis and ratio on the y-axis.
+
+```{r}
+#Calculate the standard deviation of the ratio for each station
+standard_deviation_data <- ratio_data %>%
+  group_by(stationname) %>%
+  summarise(sd_ratio = sd(ratio, na.rm = TRUE))
+```
+
+```{r}
+#Find the stations with the 5 largest standard deviations
+top_5_stations <- standard_deviation_data %>%
+  arrange(desc(sd_ratio)) %>%
+  head(5)
+
+#Filter the ratio_data for the top 5 stations
+top_5_data <- ratio_data %>%
+  filter(stationname %in% top_5_stations$stationname)
+```
+
+
+```{r}
+#Create a line plot for each station
+library(ggplot2)
+
+ggplot(top_5_data, aes(x = MONTH, y = ratio, group = stationname, color = stationname)) +
+  geom_line() +
+  labs(title = "Ratio of Rides per Day per Month For Top 5 Stations",
+       x = "Month",
+       y = "Ratio") +
+  theme_minimal()
+```
+
+
+#Python Link: https://colab.research.google.com/drive/1TpBiPp0-tsJOCROuE0ErtoS-vNKMsn5f#scrollTo=eyMhriK76hyI
