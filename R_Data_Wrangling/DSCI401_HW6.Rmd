@@ -1,0 +1,57 @@
+---
+title: "DSCI401_HW6"
+author: "Bernard Ofori Boateng"
+date: "2023-11-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Using the data whately 2015 from the macleish package, create an interactive plot using plotly (or ggplotly) displaying time (in days) on the x-axis and temperature on the y-axis with three lines: one for the high temperature of the day, one for the average temperature of the day, and one for the low temperature of the day. A csv version of the file can be found here: https://www.dropbox.com/s/m2nt50qanpijp0m/whately2015.csv?dl=0
+
+
+```{r}
+#Load the data
+whately_2015 <- read.csv("https://raw.githubusercontent.com/gjm112/DSCI401/main/data/whately_2015.csv")
+head(whately_2015)
+```
+```{r}
+#Load the packages
+library (tidyverse)
+library(lubridate)
+library(ggplot2)
+library(plotly)
+library(dygraphs)
+```
+
+
+```{r}
+whately_2015 <- as_tibble(whately_2015) #convert to tibble for easier data wrangling
+whately_2015 <- whately_2015 %>%
+  mutate(dates = as.Date(when)) %>% #add new column, dates
+  group_by(dates) %>%
+  summarise(
+    high_temp = max(temperature),
+    avg_temp = mean(temperature),
+    low_temp = min(temperature)
+  ) %>%
+  pivot_longer(!dates, names_to = "temp_category", values_to = "temperature")
+
+#Create plot
+whately_plot <- ggplot(whately_2015, aes(x = dates, y = temperature)) +
+  geom_line(aes(color = temp_category)) +
+  labs(
+    x = "Date",
+    y = "Temperature",
+    title = "Daily Temperature Trends in Whately 2015"
+  )
+
+#Convert ggplot object to plotly
+whately_plotly <- ggplotly(whately_plot)
+whately_plotly
+```
+
+# Python Link:
+# https://colab.research.google.com/drive/1eBjajUYhkdPu1sel6JTyi0CS9KITpNQE#scrollTo=Cyly8ZW2XnLj&uniqifier=2
