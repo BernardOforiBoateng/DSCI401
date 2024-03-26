@@ -1,0 +1,331 @@
+---
+title: "DSCI401_Exam1"
+author: "Bernard Ofori Boateng"
+date: "2023-12-9"
+output: html_document
+---
+
+```{rsetup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Loading the  tidyverse package
+library(tidyverse)
+```
+
+# Question 1
+
+```{r}
+#Loading the dataset
+portuguese <- read.csv("https://raw.githubusercontent.com/BernardOforiBoateng/Data_Wrangling_and_EDA_DSCI401/main/Python_Data_Wrangling/student_portuguese_clean.csv")
+
+#Reading the first few rows of the dataset
+head(portuguese)
+```
+```{r}
+#Getting the shape of the dataframe
+dim(portuguese)
+```
+# (a) (10 points) Using the Portugese language data set for the question. Consider students only if they are at least 18 years or older. For these students, they each received a grade 1 and a grade 2. Create a variable for each student that is the larger of these two scores. Then find the average score of this maximum grouping by the combination of mother job and father job. Of these combinations (i.e. mother job and father job) with more than 5 cases, what combination of jobs had the highest average of the larger of their two test scores?
+
+```{r}
+#Filter students who are at least 18 years old, create a new variable for the larger of the two scores
+max_avg_combination <- portuguese %>%
+  filter(age >= 18) %>%
+  mutate(larger_score = pmax(grade_1, grade_2)) %>%
+  group_by(mother_job, father_job) %>%
+  summarize(avg_larger_score = mean(larger_score), count = n()) %>%
+  filter(count > 5) %>%
+  slice_max(order_by = avg_larger_score) %>%
+  select(mother_job, father_job, avg_larger_score) %>% 
+  arrange(desc(avg_larger_score))
+
+print("Combination with the highest average of the larger scores:")
+print(max_avg_combination)
+```
+### The combination of jobs that had the highest average of the larger of their two test scores is :
+### mother_job = teacher; father_job = services
+
+# (b) (10 points) Using the math data set, find the mean age by sex and school. Then compute the mean final score by sex and school. Then present the results in a table where each row is a school and each column is an average of the particular variable for one sex (i.e. the first column is mean age females, the second column is mean age males, etc.).
+
+```{r}
+#Loading the dataset
+math <- read.csv("https://raw.githubusercontent.com/BernardOforiBoateng/Data_Wrangling_and_EDA_DSCI401/main/Python_Data_Wrangling/student_math_clean.csv")
+
+#Reading the first few rows of the dataset
+head(math)
+```
+
+```{r}
+#Compute the mean age by sex and school
+mean_age_by_sex_school <- math %>%
+  group_by(school, sex) %>%
+  summarize(mean_age = mean(age, na.rm = TRUE))
+
+#Compute the mean final score by sex and school
+mean_final_score_by_sex_school <- math %>%
+  group_by(school, sex) %>%
+  summarize(mean_final_score = mean(final_grade, na.rm = TRUE))
+
+#Combine the results into a table and use pivot wider
+result_table <- mean_age_by_sex_school %>%
+  left_join(mean_final_score_by_sex_school, by = c("school", "sex")) %>%
+  pivot_wider(names_from = sex, values_from = c("mean_age", "mean_final_score"), names_sep = "_")
+
+#Print the result table
+print(result_table)
+```
+
+# (c) (10 points) Exactly reproduce this plot.
+
+```{r}
+#Combine the portuguese and math datasets
+combined_data <- bind_rows(mutate(math, subject = 'Math'), mutate(portuguese, subject = 'Portuguese'))
+
+#Create the plot
+combined_data %>%
+  filter(study_time %in% c('<2 hours', '2 to 5 hours', '5 to 10 hours', '>10 hours')) %>%
+  ggplot(aes(x = study_time, y = final_grade, fill = sex)) +
+  facet_wrap(~subject) +
+  geom_boxplot() +
+  ylim(-1, 20) +
+  labs(
+       x = 'Study Time',
+       y = 'Final Grade') +
+  theme_minimal() +
+  theme(legend.position = 'right')
+```
+
+# (d) (10 points) Using the math scores data set, for each grade on the first exam, find the average grade on the final exam for all the students who had the same score on exam one. That is, for all students who score, for example, a 10 on the first exam, what was the average final score for this group of students. Do this for all grades on the first exam. Repeat this for the second exam (i.e. For each grade on the second exam, find the average grade on the final exam for all the students who had the same score on exam two). Plot the exam score (first or second) on the x-axis and the average final score on the y-axis using color to indicate whether the point was the first or second exam. The final plot should look like the one provided here.
+
+```{r}
+library(ggplot2)
+#Calculate average final score for each grade on the first exam
+avg_final_by_grade_1 <- math %>%
+  group_by(grade_1) %>%
+  summarize(avg_final = mean(final_grade, na.rm = TRUE))
+
+#Calculate average final score for each grade on the second exam
+avg_final_by_grade_2 <- math %>%
+  group_by(grade_2) %>%
+  summarize(avg_final = mean(final_grade, na.rm = TRUE))
+
+#Combine the data for plotting
+combined_data <- bind_rows(mutate(avg_final_by_grade_1, grade = grade_1, type = 'one'),
+                           mutate(avg_final_by_grade_2, grade = grade_2, type = 'two'))
+
+#Create the plot
+ggplot(combined_data, aes(x = grade, y = avg_final, color = type)) +
+  geom_point() +
+  labs(x = 'Grade', y = 'Final') +
+  scale_color_manual(values = c('red', 'green')) +
+  theme_minimal()
+```
+
+# Question 2
+
+```{r}
+#Loading the dataset
+spotify <- read.csv("https://raw.githubusercontent.com/BernardOforiBoateng/Data_Wrangling_and_EDA_DSCI401/main/Python_Data_Wrangling/spotify_songs.csv")
+
+#Reading the first few rows
+head(spotify)
+
+#shape of the dataset
+dim(spotify)
+```
+
+# (a) (10 points) Plot a line plot of the release year on the x-axis and the number of songs released in this year on the y-axis
+
+```{r}
+#Convert 'track_album_release_date' to a date type
+spotify$track_album_release_date <- as.Date(spotify$track_album_release_date)
+
+#Create the plot using the pipe operator
+spotify %>%
+  mutate(release_year = format(track_album_release_date, "%Y")) %>%
+  count(release_year) %>%
+  ggplot(aes(x = as.numeric(release_year), y = n)) +
+  geom_line() +
+  labs(title = "Number of Songs Released by Year",
+       x = "Release Year",
+       y = "Number of Songs")
+```
+
+
+# (b) (10 points) Remove all the songs that only have the release year (as opposed to the full date of release). For each release month, find the 5 most danceable songs (higher scores are better). This will give you a list of 60 total songs (i.e. 12 months times 5 songs each month equals 60). Of these 60 songs, what is the name of the playlist that contains the song with the highest tempo? Of the same 60 songs, what is the name of the playlist that contains the sond with the lowest tempo? Finally, what is the most common genre among these 60 songs, and how many songs below to that genre?
+
+```{r}
+#Remove songs with only the release year
+spotify <- spotify %>%
+  filter(!is.na(track_album_release_date))
+
+#Filter out songs with only the release year
+spotify <- spotify %>%
+  filter(format(track_album_release_date, "%Y-%m-%d") != format(track_album_release_date, "%Y-01-01"))
+
+# Extract the release month using mutate
+spotify <- spotify %>%
+  mutate(release_month = month(track_album_release_date))
+
+#Top 5 most danceable songs for each release month
+top_danceable_songs <- spotify %>%
+  arrange(desc(danceability)) %>%
+  group_by(release_month) %>%
+  filter(row_number() <= 5) %>%
+  arrange(release_month, desc(danceability))
+
+
+print(top_danceable_songs)
+```
+
+
+
+```{r}
+#Find the row with the highest tempo
+song_with_highest_tempo <- top_danceable_songs[top_danceable_songs$tempo == max(top_danceable_songs$tempo), ]
+
+#Find the playlist name for the song with the highest tempo
+playlist_name_highest_tempo <- spotify$playlist_name[spotify$track_id == song_with_highest_tempo$track_id]
+
+cat("The playlist containing the song with the highest tempo is:", playlist_name_highest_tempo, "\n")
+```
+```{r}
+#Find the name of the playlist with the lowest tempo
+song_with_lowest_tempo <- top_danceable_songs[top_danceable_songs$tempo == min(top_danceable_songs$tempo), ]
+playlist_name_lowest_tempo <- spotify$playlist_name[spotify$track_id == song_with_lowest_tempo$track_id]
+
+cat("The playlist containing the song with the lowest tempo is:", playlist_name_lowest_tempo, "\n")
+```
+
+```{r}
+#Find the most common genre among the 60 songs
+most_common_genre <- names(sort(table(top_danceable_songs$playlist_genre), decreasing = TRUE))[1]
+
+#Count the number of songs in the most common genre
+num_songs_in_most_common_genre <- sum(top_danceable_songs$playlist_genre == most_common_genre)
+
+cat("The most common genre among the 60 songs is '", most_common_genre, "' with ", num_songs_in_most_common_genre, " songs.\n")
+```
+
+# (c) (10 points) You are a wedding DJ and you are working with a nightmare couple and they have a lot of very specific requests. They want their first dance to be exactly 10 minutes long and consist of two back to back songs (they cannot be the same song!) by the artist Depeche Mode. Find the two Depeche Mode songs in this data set when played back to back the duration is as close as possible to 10 minutes (hint: a cross join may be useful here). (Note1: For loops are not allowed in your solution.)
+
+```{r}
+#Filter Depeche Mode songs
+depeche_mode_songs <- spotify %>%
+  filter(track_artist == 'Depeche Mode')
+
+#Cross join to create pairs of songs
+song_pairs <- expand.grid(depeche_mode_songs$track_id, depeche_mode_songs$track_id) %>%
+  rename(track_id_1 = Var1, track_id_2 = Var2) %>%
+  left_join(depeche_mode_songs, by = c('track_id_1' = 'track_id')) %>%
+  left_join(depeche_mode_songs, by = c('track_id_2' = 'track_id'), suffix = c('_1', '_2'))
+
+#Filter pairs where songs are different
+different_songs_pairs <- song_pairs %>%
+  filter(track_id_1 != track_id_2)
+
+#Calculate the total duration for each pair
+different_songs_pairs <- different_songs_pairs %>%
+  mutate(total_duration = (duration_ms_1 + duration_ms_2) / 60000)  #convert to minutes
+
+#Find the pair with the total duration closest to 10 minutes
+closest_pair <- different_songs_pairs %>%
+  slice(which.min(abs(total_duration - 10)))
+
+cat("Closest pair of Depeche Mode songs for a 10-minute first dance:\n")
+print(closest_pair[c('track_name_1', 'track_name_2', 'total_duration')])
+
+```
+# Question 3
+
+# (a) (10 points) Lets say that you have a population that follows a normal distribution with a mean of 10 and a variance of 20. Generate a simple random sample from this population with sample size n = 25. From this sample, compute the sample mean (i.e. ¯x). Repeat this process (i.e. generate a sample of size n = 25 and compute ¯x) a large number of times (say 5000) and store the value of ¯x each time. Compute the standard deviation of this collection of ¯x’s. This is a simulated approximation of the standard error of ¯x. What is the value that you obtain?
+
+
+```{r}
+#3 (a)
+
+set.seed(123)  # Set seed for reproducibility
+population_mean <- 10
+population_variance <- 20
+sample_size <- 25
+num_simulations <- 5000
+
+#Generate a matrix of random samples
+samples <- matrix(rnorm(sample_size * num_simulations, mean = population_mean, sd = sqrt(population_variance)),
+                  nrow = num_simulations, byrow = TRUE)
+
+#Calculate the mean for each row (sample)
+sample_means <- rowMeans(samples)
+
+#Calculate the standard deviation of the sample means
+standard_error_simulated <- sd(sample_means)
+
+cat("Simulated Standard Error of Sample Mean:", standard_error_simulated, "\n")
+
+```
+# (b) (10 points) Repeat the previous question but use the sample median instead of the mean. What is the approximate value of the standard error of the sample median? Is this bigger, smaller, or the same as the standard error of the mean?
+
+```{r}
+#3 (b)
+set.seed(123)  # Set seed for reproducibility
+population_mean <- 10
+population_variance <- 20
+sample_size <- 25
+num_simulations <- 5000
+
+#Generate a matrix of random samples
+samples <- matrix(rnorm(sample_size * num_simulations, mean = population_mean, sd = sqrt(population_variance)),
+                  nrow = num_simulations, byrow = TRUE)
+
+#Calculate the sample medians for each sample
+sample_medians <- apply(samples, 1, median)
+
+#Bootstrap method to estimate the standard error of the sample median
+median_se_values <- replicate(num_simulations, sd(sample_medians[sample.int(length(sample_medians), replace = TRUE)]))
+
+#Calculate the overall standard error of the sample median
+standard_error_median_simulated <- mean(median_se_values)
+
+cat("Simulated Standard Error of Sample Median:", standard_error_median_simulated, "\n")
+```
+## The simulated Standard error of sample median is bigger than the dimulated standard error of the mean
+
+# (c) (10 points) Now repeat both of the previous questions with values of n equal to 10, 25 (you already have this one), 50, 100, 250, 500, 1000. (Note: n is the sample size and it is not the same as the number of simulations!) Now plot n, the sample size on the x-axis versus the standard error on the y-axis as a line plot with points at each of the values of n that were used. There should be one line for median and one line for mean you should use color to distinguish between them.
+
+```{r}
+#3 (c)
+set.seed(123)  
+population_mean <- 10
+population_variance <- 20
+sample_sizes <- c(10, 25, 50, 100, 250, 500, 1000)
+num_simulations <- 5000
+
+#Generate a list of random samples for all sample sizes
+samples_list <- lapply(sample_sizes, function(n) {
+  matrix(rnorm(n * num_simulations, mean = population_mean, sd = sqrt(population_variance)),
+         nrow = num_simulations, byrow = TRUE)
+})
+
+#Calculate means and medians for each sample size
+mean_se_values <- sapply(samples_list, function(samples) rowMeans(samples))
+median_se_values <- sapply(samples_list, function(samples) apply(samples, 1, median))
+
+#Calculate standard errors
+mean_standard_errors <- apply(mean_se_values, 2, sd)
+median_standard_errors <- apply(median_se_values, 2, sd)
+
+#Plot the results
+plot(sample_sizes, mean_standard_errors, type = "b", col = "blue", pch = 16, ylim = c(0, max(mean_standard_errors, median_standard_errors)),
+     xlab = "Sample Size", ylab = "Standard Error", main = "Standard Error vs. Sample Size")
+points(sample_sizes, median_standard_errors, col = "red", pch = 16)
+lines(sample_sizes, mean_standard_errors, col = "blue", type = "b")
+lines(sample_sizes, median_standard_errors, col = "red", type = "b")
+legend("topright", legend = c("Mean", "Median"), col = c("blue", "red"), pch = 16, title = "Legend")
+```
+
+
+
+Google Colab link: https://colab.research.google.com/drive/1y8VenHdMGnnzcASapDqp4taOl9VXZKWL#scrollTo=aiAzpa5tGMqC
+
